@@ -1,0 +1,9 @@
+target/
+data/
+_archive_react/
+.git/
+.gitignore
+.DS_Store
+*.log
+.env
+.env.local

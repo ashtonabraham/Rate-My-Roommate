@@ -41,9 +41,13 @@ async fn main() -> anyhow::Result<()> {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let addr: SocketAddr = std::env::var("BIND_ADDR")
-        .unwrap_or_else(|_| "127.0.0.1:3000".to_string())
-        .parse()?;
+    let addr: SocketAddr = if let Ok(port) = std::env::var("PORT") {
+        format!("0.0.0.0:{port}").parse()?
+    } else {
+        std::env::var("BIND_ADDR")
+            .unwrap_or_else(|_| "127.0.0.1:3000".to_string())
+            .parse()?
+    };
     tracing::info!("listening on http://{addr}");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
