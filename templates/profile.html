@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{{ profile.display_name }} · Rate My Roommate{% endblock %}
+
+{% block content %}
+<section class="profile-header">
+  <div>
+    <p class="eyebrow">{{ profile.college }}</p>
+    <h1>{{ profile.display_name }}</h1>
+    {% if !profile.bio.is_empty() %}<p class="bio big">{{ profile.bio }}</p>{% endif %}
+  </div>
+  <div class="big-rating">
+    <p class="big-number">
+      {% match profile.avg_overall %}
+        {% when Some with (avg) %}{{ "{:.1}"|format(avg) }}
+        {% when None %}—
+      {% endmatch %}
+    </p>
+    <p class="muted">{{ profile.review_count }} review{% if profile.review_count != 1 %}s{% endif %}</p>
+  </div>
+</section>
+
+{% if can_review %}
+<section class="section review-form-section">
+  <h2>Leave a review</h2>
+  <p class="muted">Honest. Specific. No personal attacks.</p>
+  <form action="/reviews" method="post" class="review-form">
+    <input type="hidden" name="target_user_id" value="{{ profile.id }}" />
+
+    <label class="field">
+      <span>Your review</span>
+      <textarea name="comment" rows="4" maxlength="2000" required
+                placeholder="What should future roommates know? Stick to behaviors and facts."></textarea>
+    </label>
+
+    <div class="ratings-grid">
+      {% include "_rating_field.html" %}
+    </div>
+
+    <label class="checkbox">
+      <input type="checkbox" name="anonymous" />
+      <span>Post anonymously</span>
+    </label>
+
+    <button class="primary-btn" type="submit">Post review</button>
+  </form>
+</section>
+{% else %}
+  {% if is_self %}
+    <section class="section info-card">
+      <h2>This is your profile</h2>
+      <p class="muted">Share the link with past roommates so they can review you.</p>
+    </section>
+  {% else %}
+    <section class="section info-card">
+      <h2>Want to leave a review?</h2>
+      <p class="muted">You need an account first. <a href="/signup">Join</a> or <a href="/signin">sign in</a>.</p>
+    </section>
+  {% endif %}
+{% endif %}
+
+<section class="section">
+  <div class="section-head">
+    <h2>Reviews</h2>
+  </div>
+  {% if reviews.is_empty() %}
+    <div class="empty-card"><p>No reviews yet.</p></div>
+  {% else %}
+    <div class="review-stream">
+      {% for r in reviews %}
+        <article class="review-card">
+          <header class="review-head">
+            <span class="review-target">{{ r.author_label }}</span>
+            <span class="overall-pill">{{ r.overall }}/5</span>
+          </header>
+          <p class="review-body">{{ r.comment }}</p>
+          <ul class="rating-list">
+            <li><span>Cleanliness</span><b>{{ r.cleanliness }}</b></li>
+            <li><span>Communication</span><b>{{ r.communication }}</b></li>
+            <li><span>Reliability</span><b>{{ r.reliability }}</b></li>
+            <li><span>Noise</span><b>{{ r.noise }}</b></li>
+            <li><span>Guests</span><b>{{ r.guests }}</b></li>
+          </ul>
+          <footer class="review-foot muted">
+            {% if r.anonymous %}<span class="tag">anonymous</span>{% else %}<span class="tag verified">verified</span>{% endif %}
+            <span>·</span>
+            <span>{{ r.created_at }}</span>
+          </footer>
+        </article>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

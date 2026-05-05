@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in · Rate My Roommate{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    <p class="eyebrow">Welcome back</p>
+    <h1>Sign in</h1>
+
+    {% if let Some(err) = error %}
+      <div class="error-card">{{ err }}</div>
+    {% endif %}
+
+    <form action="/signin" method="post" class="auth-form">
+      <label class="field">
+        <span>Email</span>
+        <input type="email" name="email" value="{{ email }}" required />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input type="password" name="password" required />
+      </label>
+      <button class="primary-btn full" type="submit">Sign in</button>
+    </form>
+
+    <p class="muted small">
+      New here? <a href="/signup">Create an account</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">For college students</p>
+  <h1>Find better roommates <span class="accent">before</span> you move in.</h1>
+  <p class="hero-copy">
+    Search real students. See ratings on cleanliness, noise, guests, and more.
+    Leave honest reviews of people you've actually lived with.
+  </p>
+  <form class="search-form" action="/" method="get">
+    <input
+      type="search"
+      name="q"
+      value="{{ query }}"
+      placeholder="Search by name or college..."
+      aria-label="Search"
+    />
+    <button class="primary-btn" type="submit">Search</button>
+  </form>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <h2>{% if query.is_empty() %}All profiles{% else %}Results for "{{ query }}"{% endif %}</h2>
+    <p class="muted">{{ profiles.len() }} found</p>
+  </div>
+
+  {% if profiles.is_empty() %}
+    <div class="empty-card">
+      <p>No matches yet.</p>
+      <p class="muted">Try another name or college — or be the first to <a href="/signup">join</a>.</p>
+    </div>
+  {% else %}
+    <div class="grid">
+      {% for p in profiles %}
+        <a class="card profile-card" href="/profile/{{ p.id }}">
+          <div class="card-head">
+            <h3>{{ p.display_name }}</h3>
+            <span class="rating-pill">
+              {% match p.avg_overall %}
+                {% when Some with (avg) %}{{ "{:.1}"|format(avg) }}
+                {% when None %}—
+              {% endmatch %}
+            </span>
+          </div>
+          <p class="muted">{{ p.college }}</p>
+          {% if !p.bio.is_empty() %}
+            <p class="bio">{{ p.bio }}</p>
+          {% endif %}
+          <p class="card-foot muted">{{ p.review_count }} review{% if p.review_count != 1 %}s{% endif %}</p>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
+{% if !recent.is_empty() %}
+<section class="section">
+  <div class="section-head">
+    <h2>Recent reviews</h2>
+  </div>
+  <div class="review-stream">
+    {% for r in recent %}
+      <article class="review-card">
+        <header class="review-head">
+          <a href="/profile/{{ r.target_id }}" class="review-target">{{ r.target_display_name }}</a>
+          <span class="overall-pill">{{ r.overall }}/5</span>
+        </header>
+        <p class="review-body">{{ r.comment }}</p>
+        <footer class="review-foot muted">
+          <span>by {{ r.author_label }}</span>
+          {% if r.anonymous %}<span class="tag">anonymous</span>{% else %}<span class="tag verified">verified</span>{% endif %}
+          <span>·</span>
+          <span>{{ r.created_at }}</span>
+        </footer>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

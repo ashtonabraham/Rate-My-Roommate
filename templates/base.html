@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Rate My Roommate{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">
+      <span class="brand-mark">RMR</span>
+      <span class="brand-name">Rate My Roommate</span>
+    </a>
+    <nav class="topnav">
+      {% if nav.signed_in %}
+        <a class="nav-link" href="/profile/{{ nav.user_id }}">My profile</a>
+        <span class="nav-name">Hi, {{ nav.display_name }}</span>
+        <form action="/signout" method="post" class="inline-form">
+          <button class="ghost-btn" type="submit">Sign out</button>
+        </form>
+      {% else %}
+        <a class="nav-link" href="/signin">Sign in</a>
+        <a class="primary-btn" href="/signup">Join</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <main class="page">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="foot">
+    <p>A side project. Be kind. <span class="muted">Reviews are public.</span></p>
+  </footer>
+</body>
+</html>

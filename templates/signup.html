@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Join · Rate My Roommate{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    <p class="eyebrow">Get on the list</p>
+    <h1>Create your profile</h1>
+    <p class="muted">Sign up to be reviewable and to leave reviews of others.</p>
+
+    {% if let Some(err) = error %}
+      <div class="error-card">{{ err }}</div>
+    {% endif %}
+
+    <form action="/signup" method="post" class="auth-form">
+      <label class="field">
+        <span>Display name</span>
+        <input type="text" name="display_name" value="{{ display_name }}" maxlength="40" required
+               placeholder="What should others see?" />
+      </label>
+
+      <label class="field">
+        <span>College / university</span>
+        <input type="text" name="college" list="college-list" value="{{ college }}" maxlength="80" required
+               placeholder="e.g. UT Austin" />
+        <datalist id="college-list">
+          <option value="Boston University"></option>
+          <option value="Northeastern University"></option>
+          <option value="UT Austin"></option>
+          <option value="NYU"></option>
+          <option value="UCLA"></option>
+          <option value="UC Berkeley"></option>
+          <option value="University of Michigan"></option>
+          <option value="University of Washington"></option>
+          <option value="Penn State"></option>
+          <option value="Ohio State"></option>
+          <option value="Arizona State"></option>
+          <option value="Florida State"></option>
+          <option value="University of Florida"></option>
+          <option value="University of Georgia"></option>
+          <option value="University of Wisconsin-Madison"></option>
+          <option value="University of Minnesota"></option>
+          <option value="University of Illinois Urbana-Champaign"></option>
+          <option value="Cornell University"></option>
+        </datalist>
+      </label>
+
+      <label class="field">
+        <span>Email</span>
+        <input type="email" name="email" value="{{ email }}" required placeholder="you@school.edu" />
+      </label>
+
+      <label class="field">
+        <span>Password</span>
+        <input type="password" name="password" required minlength="8" placeholder="8+ characters" />
+      </label>
+
+      <label class="field">
+        <span>Bio <em class="muted">(optional)</em></span>
+        <textarea name="bio" rows="3" maxlength="500"
+                  placeholder="Quiet weeknights, loves clean kitchens...">{{ bio }}</textarea>
+      </label>
+
+      <button class="primary-btn full" type="submit">Create account</button>
+    </form>
+
+    <p class="muted small">
+      Already have an account? <a href="/signin">Sign in</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}
