@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- build ----
-FROM rust:1.83-bookworm AS builder
+FROM rust:1.88-bookworm AS builder
 WORKDIR /app
 
 # Cache deps: build a stub crate against Cargo.toml/Cargo.lock first
