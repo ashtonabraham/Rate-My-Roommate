@@ -91,6 +91,12 @@ async fn init_schema(pool: &SqlitePool) -> Result<()> {
     .execute(pool)
     .await?;
 
+    sqlx::query(
+        "UPDATE users SET verified_at = datetime('now') WHERE verified_at IS NULL AND email IN ('jordan@demo.app', 'samira@demo.app', 'chris@demo.app')",
+    )
+    .execute(pool)
+    .await?;
+
     Ok(())
 }
 
