@@ -6,7 +6,7 @@
 <section class="profile-header">
   <div>
     <p class="eyebrow">{{ profile.college }}</p>
-    <h1>{{ profile.display_name }}</h1>
+    <h1>{{ profile.display_name }}{% if profile.is_verified %} <span class="badge verified" title="Email verified">&#10003; Verified</span>{% endif %}</h1>
     {% if !profile.bio.is_empty() %}<p class="bio big">{{ profile.bio }}</p>{% endif %}
   </div>
   <div class="big-rating">
@@ -50,6 +50,14 @@
     <section class="section info-card">
       <h2>This is your profile</h2>
       <p class="muted">Share the link with past roommates so they can review you.</p>
+    </section>
+  {% else if needs_verify %}
+    <section class="section info-card">
+      <h2>Verify your email to leave a review</h2>
+      <p class="muted">We gate reviews to verified .edu emails to keep this honest.</p>
+      <form action="/verify/resend" method="post" class="inline-form">
+        <button class="primary-btn" type="submit">Send verification link</button>
+      </form>
     </section>
   {% else %}
     <section class="section info-card">

@@ -47,11 +47,11 @@
       </label>
 
       <label class="field">
-        <span>Email</span>
-        <input type="email" name="email" value="{{ email }}" required placeholder="you@school.edu" />
+        <span>School email <em class="muted">(must end in .edu)</em></span>
+        <input type="email" name="email" value="{{ email }}" required placeholder="you@school.edu" pattern=".+\.edu" />
       </label>
 
-      <label class="field">
+      <label class="field" data-pwfield>
         <span>Password</span>
         <input type="password" name="password" required minlength="8" placeholder="8+ characters" />
       </label>
@@ -70,4 +70,5 @@
     </p>
   </div>
 </section>
+<script src="/static/password-reveal.js" defer></script>
 {% endblock %}

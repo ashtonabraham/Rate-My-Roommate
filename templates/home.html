@@ -36,7 +36,7 @@
       {% for p in profiles %}
         <a class="card profile-card" href="/profile/{{ p.id }}">
           <div class="card-head">
-            <h3>{{ p.display_name }}</h3>
+            <h3>{{ p.display_name }}{% if p.is_verified %} <span class="badge verified compact" title="Email verified">&#10003;</span>{% endif %}</h3>
             <span class="rating-pill">
               {% match p.avg_overall %}
                 {% when Some with (avg) %}{{ "{:.1}"|format(avg) }}

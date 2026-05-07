@@ -36,6 +36,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/signin", get(handlers::signin_page).post(handlers::signin_submit))
         .route("/signout", post(handlers::signout))
         .route("/reviews", post(handlers::submit_review))
+        .route("/verify/:token", get(handlers::verify_email))
+        .route("/verify/resend", post(handlers::resend_verification))
         .nest_service("/static", ServeDir::new("static"))
         .layer(CookieManagerLayer::new())
         .layer(TraceLayer::new_for_http())

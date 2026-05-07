@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}{% if success %}Verified{% else %}Verification failed{% endif %} · Rate My Roommate{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    {% if success %}
+      <p class="eyebrow good">All set</p>
+      <h1>Email verified</h1>
+      <p class="muted">{{ message }}</p>
+      <a class="primary-btn full" href="/">Back to home</a>
+    {% else %}
+      <p class="eyebrow danger">Hmm</p>
+      <h1>Couldn't verify</h1>
+      <p class="muted">{{ message }}</p>
+      {% if nav.signed_in %}
+        <form action="/verify/resend" method="post" class="inline-form">
+          <button class="primary-btn full" type="submit">Send a new link</button>
+        </form>
+      {% else %}
+        <a class="primary-btn full" href="/signin">Sign in</a>
+      {% endif %}
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

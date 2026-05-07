@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Verify your email · Rate My Roommate{% endblock %}
+
+{% block content %}
+<section class="auth-wrap">
+  <div class="auth-card">
+    <p class="eyebrow">One more step</p>
+    <h1>Check your email</h1>
+    <p class="muted">We sent a verification link to <strong>{{ email }}</strong>. Click it to activate your account so you can leave reviews.</p>
+
+    <div class="dev-link-card">
+      <p class="muted small">Dev preview — email delivery isn't wired up yet, so here's your link:</p>
+      <a class="primary-btn full" href="{{ verify_url }}">Verify my email</a>
+      <p class="muted small mono">{{ verify_url }}</p>
+    </div>
+
+    <p class="muted small">
+      Wrong address? <a href="/signout">Sign out</a> and start again.
+    </p>
+  </div>
+</section>
+{% endblock %}

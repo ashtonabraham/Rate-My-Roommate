@@ -2,6 +2,7 @@ use anyhow::Result;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use std::str::FromStr;
+use uuid::Uuid;
 
 use crate::models::{PublicProfile, Review, ReviewView, User};
 
@@ -27,12 +28,22 @@ async fn init_schema(pool: &SqlitePool) -> Result<()> {
             display_name TEXT NOT NULL,
             college TEXT NOT NULL,
             bio TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            verified_at TEXT
         );
         "#,
     )
     .execute(pool)
     .await?;
+
+    if let Err(e) = sqlx::query("ALTER TABLE users ADD COLUMN verified_at TEXT")
+        .execute(pool)
+        .await
+    {
+        if !e.to_string().contains("duplicate column") {
+            return Err(e.into());
+        }
+    }
 
     sqlx::query(
         r#"
@@ -58,6 +69,27 @@ async fn init_schema(pool: &SqlitePool) -> Result<()> {
     sqlx::query("CREATE INDEX IF NOT EXISTS idx_reviews_target ON reviews(target_user_id);")
         .execute(pool)
         .await?;
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token TEXT NOT NULL UNIQUE,
+            expires_at TEXT NOT NULL,
+            consumed_at TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        "#,
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(
+        "CREATE INDEX IF NOT EXISTS idx_email_verifications_user ON email_verifications(user_id);",
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -106,11 +138,12 @@ pub async fn search_profiles(pool: &SqlitePool, query: Option<&str>) -> Result<V
 
     let rows = if let Some(qstr) = q {
         let like = format!("%{}%", qstr);
-        sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>)>(
+        sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>, Option<String>)>(
             r#"
             SELECT u.id, u.display_name, u.college, u.bio,
                    COUNT(r.id) AS review_count,
-                   AVG(r.overall) AS avg_overall
+                   AVG(r.overall) AS avg_overall,
+                   u.verified_at
             FROM users u
             LEFT JOIN reviews r ON r.target_user_id = u.id
             WHERE u.display_name LIKE ? OR u.college LIKE ?
@@ -123,11 +156,12 @@ pub async fn search_profiles(pool: &SqlitePool, query: Option<&str>) -> Result<V
         .fetch_all(pool)
         .await?
     } else {
-        sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>)>(
+        sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>, Option<String>)>(
             r#"
             SELECT u.id, u.display_name, u.college, u.bio,
                    COUNT(r.id) AS review_count,
-                   AVG(r.overall) AS avg_overall
+                   AVG(r.overall) AS avg_overall,
+                   u.verified_at
             FROM users u
             LEFT JOIN reviews r ON r.target_user_id = u.id
             GROUP BY u.id
@@ -140,23 +174,27 @@ pub async fn search_profiles(pool: &SqlitePool, query: Option<&str>) -> Result<V
 
     Ok(rows
         .into_iter()
-        .map(|(id, display_name, college, bio, review_count, avg_overall)| PublicProfile {
-            id,
-            display_name,
-            college,
-            bio,
-            review_count,
-            avg_overall,
+        .map(|(id, display_name, college, bio, review_count, avg_overall, verified_at)| {
+            PublicProfile {
+                id,
+                display_name,
+                college,
+                bio,
+                review_count,
+                avg_overall,
+                is_verified: verified_at.is_some(),
+            }
         })
         .collect())
 }
 
 pub async fn profile_for_user(pool: &SqlitePool, user_id: &str) -> Result<Option<PublicProfile>> {
-    let row = sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>)>(
+    let row = sqlx::query_as::<_, (String, String, String, String, i64, Option<f64>, Option<String>)>(
         r#"
         SELECT u.id, u.display_name, u.college, u.bio,
                COUNT(r.id) AS review_count,
-               AVG(r.overall) AS avg_overall
+               AVG(r.overall) AS avg_overall,
+               u.verified_at
         FROM users u
         LEFT JOIN reviews r ON r.target_user_id = u.id
         WHERE u.id = ?
@@ -167,7 +205,7 @@ pub async fn profile_for_user(pool: &SqlitePool, user_id: &str) -> Result<Option
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|(id, display_name, college, bio, review_count, avg_overall)| {
+    Ok(row.map(|(id, display_name, college, bio, review_count, avg_overall, verified_at)| {
         PublicProfile {
             id,
             display_name,
@@ -175,6 +213,7 @@ pub async fn profile_for_user(pool: &SqlitePool, user_id: &str) -> Result<Option
             bio,
             review_count,
             avg_overall,
+            is_verified: verified_at.is_some(),
         }
     }))
 }
@@ -308,6 +347,51 @@ pub async fn insert_review(pool: &SqlitePool, review: &Review) -> Result<()> {
     Ok(())
 }
 
+pub async fn create_verification_token(pool: &SqlitePool, user_id: &str) -> Result<String> {
+    let id = Uuid::new_v4().to_string();
+    let token = Uuid::new_v4().simple().to_string();
+    sqlx::query(
+        "INSERT INTO email_verifications (id, user_id, token, expires_at) VALUES (?, ?, ?, datetime('now', '+24 hours'))",
+    )
+    .bind(&id)
+    .bind(user_id)
+    .bind(&token)
+    .execute(pool)
+    .await?;
+    Ok(token)
+}
+
+pub async fn consume_verification_token(pool: &SqlitePool, token: &str) -> Result<Option<String>> {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT user_id FROM email_verifications WHERE token = ? AND consumed_at IS NULL AND expires_at > datetime('now')",
+    )
+    .bind(token)
+    .fetch_optional(pool)
+    .await?;
+
+    let Some((user_id,)) = row else { return Ok(None) };
+
+    sqlx::query("UPDATE email_verifications SET consumed_at = datetime('now') WHERE token = ?")
+        .bind(token)
+        .execute(pool)
+        .await?;
+    sqlx::query("UPDATE users SET verified_at = datetime('now') WHERE id = ? AND verified_at IS NULL")
+        .bind(&user_id)
+        .execute(pool)
+        .await?;
+    Ok(Some(user_id))
+}
+
+pub async fn invalidate_user_verification_tokens(pool: &SqlitePool, user_id: &str) -> Result<()> {
+    sqlx::query(
+        "UPDATE email_verifications SET consumed_at = datetime('now') WHERE user_id = ? AND consumed_at IS NULL",
+    )
+    .bind(user_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn user_count(pool: &SqlitePool) -> Result<i64> {
     let (count,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM users")
         .fetch_one(pool)
@@ -321,7 +405,6 @@ pub async fn seed_if_empty(pool: &SqlitePool) -> Result<()> {
     }
 
     use crate::auth::hash_password;
-    use uuid::Uuid;
 
     let demo_password = hash_password("password123")?;
 
@@ -378,6 +461,10 @@ pub async fn seed_if_empty(pool: &SqlitePool) -> Result<()> {
         };
         insert_review(pool, &r).await?;
     }
+
+    sqlx::query("UPDATE users SET verified_at = datetime('now') WHERE verified_at IS NULL")
+        .execute(pool)
+        .await?;
 
     Ok(())
 }

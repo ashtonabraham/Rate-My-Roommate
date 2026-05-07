@@ -27,6 +27,15 @@
     </nav>
   </header>
 
+  {% if nav.signed_in && !nav.verified %}
+    <div class="verify-banner">
+      <span>Your email isn't verified yet — reviews are locked until you confirm it.</span>
+      <form action="/verify/resend" method="post" class="inline-form">
+        <button class="ghost-btn small" type="submit">Resend link</button>
+      </form>
+    </div>
+  {% endif %}
+
   <main class="page">
     {% block content %}{% endblock %}
   </main>

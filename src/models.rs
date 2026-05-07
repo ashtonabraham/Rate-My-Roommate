@@ -9,6 +9,7 @@ pub struct User {
     pub college: String,
     pub bio: String,
     pub created_at: String,
+    pub verified_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -19,6 +20,7 @@ pub struct PublicProfile {
     pub bio: String,
     pub review_count: i64,
     pub avg_overall: Option<f64>,
+    pub is_verified: bool,
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow)]

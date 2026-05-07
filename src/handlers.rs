@@ -39,6 +39,23 @@ struct ProfileTemplate {
     reviews: Vec<ReviewView>,
     can_review: bool,
     is_self: bool,
+    needs_verify: bool,
+}
+
+#[derive(Template)]
+#[template(path = "check_email.html")]
+struct CheckEmailTemplate {
+    nav: NavCtx,
+    email: String,
+    verify_url: String,
+}
+
+#[derive(Template)]
+#[template(path = "verified.html")]
+struct VerifiedTemplate {
+    nav: NavCtx,
+    success: bool,
+    message: String,
 }
 
 #[derive(Template)]
@@ -70,6 +87,7 @@ pub struct NavCtx {
     pub signed_in: bool,
     pub display_name: String,
     pub user_id: String,
+    pub verified: bool,
 }
 
 async fn build_nav(state: &AppState, cookies: &Cookies) -> NavCtx {
@@ -79,6 +97,7 @@ async fn build_nav(state: &AppState, cookies: &Cookies) -> NavCtx {
                 signed_in: true,
                 display_name: user.display_name,
                 user_id: user.id,
+                verified: user.verified_at.is_some(),
             };
         }
     }
@@ -86,6 +105,7 @@ async fn build_nav(state: &AppState, cookies: &Cookies) -> NavCtx {
         signed_in: false,
         display_name: String::new(),
         user_id: String::new(),
+        verified: false,
     }
 }
 
@@ -137,7 +157,8 @@ pub async fn profile_page(
         .unwrap_or_default();
 
     let is_self = nav.signed_in && nav.user_id == id;
-    let can_review = nav.signed_in && !is_self;
+    let can_review = nav.signed_in && !is_self && nav.verified;
+    let needs_verify = nav.signed_in && !is_self && !nav.verified;
 
     render(ProfileTemplate {
         nav,
@@ -145,6 +166,7 @@ pub async fn profile_page(
         reviews,
         can_review,
         is_self,
+        needs_verify,
     })
 }
 
@@ -177,6 +199,8 @@ pub async fn signup_submit(
     let mut error: Option<String> = None;
     if email.is_empty() || !email.contains('@') {
         error = Some("Please enter a valid email.".into());
+    } else if !email.ends_with(".edu") {
+        error = Some("Please use your school .edu email so we can verify you.".into());
     } else if password.len() < 8 {
         error = Some("Password must be at least 8 characters.".into());
     } else if display_name.is_empty() {
@@ -249,7 +273,94 @@ pub async fn signup_submit(
     }
 
     set_session(&cookies, &user_id);
-    Redirect::to(&format!("/profile/{}", user_id)).into_response()
+
+    let token = match db::create_verification_token(&state.pool, &user_id).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("create_verification_token: {e}");
+            return Redirect::to(&format!("/profile/{}", user_id)).into_response();
+        }
+    };
+
+    let nav = build_nav(&state, &cookies).await;
+    render(CheckEmailTemplate {
+        nav,
+        email,
+        verify_url: format!("/verify/{}", token),
+    })
+}
+
+pub async fn verify_email(
+    State(state): State<SharedState>,
+    cookies: Cookies,
+    Path(token): Path<String>,
+) -> Response {
+    let result = db::consume_verification_token(&state.pool, &token).await;
+    match result {
+        Ok(Some(user_id)) => {
+            if current_user_id(&cookies).is_none() {
+                set_session(&cookies, &user_id);
+            }
+            let nav = build_nav(&state, &cookies).await;
+            render(VerifiedTemplate {
+                nav,
+                success: true,
+                message: "Your email is verified — you can now leave reviews.".into(),
+            })
+        }
+        Ok(None) => {
+            let nav = build_nav(&state, &cookies).await;
+            render(VerifiedTemplate {
+                nav,
+                success: false,
+                message: "This verification link is invalid or has expired. Sign in and request a new one.".into(),
+            })
+        }
+        Err(e) => {
+            tracing::error!("consume_verification_token: {e}");
+            let nav = build_nav(&state, &cookies).await;
+            render(VerifiedTemplate {
+                nav,
+                success: false,
+                message: "Something went wrong. Please try again.".into(),
+            })
+        }
+    }
+}
+
+pub async fn resend_verification(
+    State(state): State<SharedState>,
+    cookies: Cookies,
+) -> Response {
+    let uid = match current_user_id(&cookies) {
+        Some(id) => id,
+        None => return Redirect::to("/signin").into_response(),
+    };
+
+    let user = match db::find_user_by_id(&state.pool, &uid).await {
+        Ok(Some(u)) => u,
+        _ => return Redirect::to("/").into_response(),
+    };
+
+    if user.verified_at.is_some() {
+        return Redirect::to("/").into_response();
+    }
+
+    let _ = db::invalidate_user_verification_tokens(&state.pool, &uid).await;
+    let token = match db::create_verification_token(&state.pool, &uid).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("create_verification_token: {e}");
+            return Redirect::to("/").into_response();
+        }
+    };
+
+    let nav = build_nav(&state, &cookies).await;
+    render(CheckEmailTemplate {
+        nav,
+        email: user.email,
+        verify_url: format!("/verify/{}", token),
+    })
 }
 
 pub async fn signin_page(State(state): State<SharedState>, cookies: Cookies) -> Response {
@@ -318,6 +429,14 @@ pub async fn submit_review(
         Some(id) => id,
         None => return Redirect::to("/signin").into_response(),
     };
+
+    let user = match db::find_user_by_id(&state.pool, &uid).await {
+        Ok(Some(u)) => u,
+        _ => return Redirect::to("/signin").into_response(),
+    };
+    if user.verified_at.is_none() {
+        return Redirect::to(&format!("/profile/{}", form.target_user_id)).into_response();
+    }
 
     if uid == form.target_user_id {
         return Redirect::to(&format!("/profile/{}", form.target_user_id)).into_response();
