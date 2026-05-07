@@ -405,7 +405,7 @@ a.review-target:hover { color: var(--accent-2); }
   color: var(--muted);
 }
 .rating-list li { display: flex; justify-content: space-between; }
-.rating-list b { color: var(--text); font-weight: 600; }
+.rating-list b { font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* ---------- forms ---------- */
 .field {
