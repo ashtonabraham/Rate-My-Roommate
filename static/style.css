@@ -233,6 +233,28 @@ p { margin: 0 0 0.6em; }
   text-align: center;
 }
 
+/* ---------- back link ---------- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-2);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease, transform 0.06s ease;
+}
+.back-link:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: var(--card-2);
+}
+.back-link:active { transform: translateY(1px); }
+
 /* ---------- profile detail ---------- */
 .profile-header {
   display: flex;
