@@ -3,7 +3,7 @@
 {% block title %}{{ profile.display_name }} · Rate My Roommate{% endblock %}
 
 {% block content %}
-<a href="/" class="back-link">&larr; Back</a>
+<a href="/" class="back-link" aria-label="Back">&lsaquo;</a>
 
 <section class="profile-header">
   <div>
@@ -12,7 +12,7 @@
     {% if !profile.bio.is_empty() %}<p class="bio big">{{ profile.bio }}</p>{% endif %}
   </div>
   <div class="big-rating">
-    <p class="big-number">
+    <p class="big-number tier-{{ profile.avg_overall|tier_avg }}">
       {% match profile.avg_overall %}
         {% when Some with (avg) %}{{ "{:.1}"|format(avg) }}
         {% when None %}—
@@ -81,15 +81,15 @@
         <article class="review-card">
           <header class="review-head">
             <span class="review-target">{{ r.author_label }}</span>
-            <span class="overall-pill">{{ r.overall }}/5</span>
+            <span class="overall-pill tier-{{ r.overall|tier }}">{{ r.overall }}/5</span>
           </header>
           <p class="review-body">{{ r.comment }}</p>
           <ul class="rating-list">
-            <li><span>Cleanliness</span><b>{{ r.cleanliness }}</b></li>
-            <li><span>Communication</span><b>{{ r.communication }}</b></li>
-            <li><span>Reliability</span><b>{{ r.reliability }}</b></li>
-            <li><span>Noise</span><b>{{ r.noise }}</b></li>
-            <li><span>Guests</span><b>{{ r.guests }}</b></li>
+            <li><span>Cleanliness</span><b class="tier-{{ r.cleanliness|tier }}">{{ r.cleanliness }}</b></li>
+            <li><span>Communication</span><b class="tier-{{ r.communication|tier }}">{{ r.communication }}</b></li>
+            <li><span>Reliability</span><b class="tier-{{ r.reliability|tier }}">{{ r.reliability }}</b></li>
+            <li><span>Noise</span><b class="tier-{{ r.noise|tier }}">{{ r.noise }}</b></li>
+            <li><span>Guests</span><b class="tier-{{ r.guests|tier }}">{{ r.guests }}</b></li>
           </ul>
           <footer class="review-foot muted">
             {% if r.anonymous %}<span class="tag">anonymous</span>{% else %}<span class="tag verified">verified</span>{% endif %}

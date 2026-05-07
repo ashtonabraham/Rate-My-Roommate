@@ -37,7 +37,7 @@
         <a class="card profile-card" href="/profile/{{ p.id }}">
           <div class="card-head">
             <h3>{{ p.display_name }}{% if p.is_verified %} <span class="badge verified compact" title="Email verified">&#10003;</span>{% endif %}</h3>
-            <span class="rating-pill">
+            <span class="rating-pill tier-{{ p.avg_overall|tier_avg }}">
               {% match p.avg_overall %}
                 {% when Some with (avg) %}{{ "{:.1}"|format(avg) }}
                 {% when None %}—
@@ -65,7 +65,7 @@
       <article class="review-card">
         <header class="review-head">
           <a href="/profile/{{ r.target_id }}" class="review-target">{{ r.target_display_name }}</a>
-          <span class="overall-pill">{{ r.overall }}/5</span>
+          <span class="overall-pill tier-{{ r.overall|tier }}">{{ r.overall }}/5</span>
         </header>
         <p class="review-body">{{ r.comment }}</p>
         <footer class="review-foot muted">

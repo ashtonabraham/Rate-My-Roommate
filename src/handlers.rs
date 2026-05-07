@@ -15,6 +15,31 @@ use crate::models::{
     PublicProfile, Review, ReviewForm, ReviewView, SearchQuery, SigninForm, SignupForm,
 };
 
+mod filters {
+    pub fn tier(value: &i64) -> ::askama::Result<&'static str> {
+        Ok(match *value {
+            5 => "gold",
+            4 => "green",
+            3 => "blue",
+            2 => "yellow",
+            1 => "orange",
+            _ => "red",
+        })
+    }
+
+    pub fn tier_avg(value: &Option<f64>) -> ::askama::Result<&'static str> {
+        Ok(match *value {
+            Some(v) if v >= 5.0 => "gold",
+            Some(v) if v >= 4.0 => "green",
+            Some(v) if v >= 3.0 => "blue",
+            Some(v) if v >= 2.0 => "yellow",
+            Some(v) if v >= 1.0 => "orange",
+            Some(_) => "red",
+            None => "none",
+        })
+    }
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
