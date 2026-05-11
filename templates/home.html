@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 
 {% block content %}
+<h1 class="big-greet">Hi, {% if nav.signed_in %}{{ nav.display_name }}{% else %}stranger{% endif %}.</h1>
+
 <section class="hero">
   <p class="eyebrow">For college students</p>
   <h1>Find better roommates <span class="accent">before</span> you move in.</h1>

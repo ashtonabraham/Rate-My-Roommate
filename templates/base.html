@@ -16,7 +16,6 @@
     <nav class="topnav">
       {% if nav.signed_in %}
         <a class="nav-link" href="/profile/{{ nav.user_id }}">My profile</a>
-        <span class="nav-name">Hi, {{ nav.display_name }}</span>
         <form action="/signout" method="post" class="inline-form">
           <button class="ghost-btn" type="submit">Sign out</button>
         </form>
